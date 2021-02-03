@@ -1,24 +1,38 @@
 package org.example;
 
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class ExcelReader {
-    private static String FILE_LOCATION = "C:\\Users\\po.pouryaie\\Desktop\\98-update.xlsx";
+public class ExcelTools {
 
-    static FileInputStream file;
+    static ExcelTools excelTools = null;
 
-    static Workbook workbook;
+    public ExcelTools() {
+    }
 
-    public static void reader() {
+    static ExcelTools getInstance(){
+        if(excelTools == null){
+            excelTools = new ExcelTools();
+        }
+        return excelTools;
+    }
+
+    public void reader(String fileLocation) {
+
+        FileInputStream file;
+        Workbook workbook = null;
+
         try{
-            file = new FileInputStream(new File(FILE_LOCATION));
+            file = new FileInputStream(new File(fileLocation));
             workbook = new XSSFWorkbook(file);
         } catch (IOException e) {
             e.printStackTrace();
@@ -60,11 +74,11 @@ public class ExcelReader {
             }
             i++;
         }
-        System.out.printf("Done");
+        System.out.println("Done");
     }
 
 
-    public Map<Integer, List<String>> superReader(List<String> fileLocations, String... columnNames) {
+    public Map<Integer, List<String>> readerWithColumnSelect(List<String> fileLocations, String... columnNames) {
 
         Map<Integer, List<String>> data = new HashMap<>();
         Map<String, Integer> indexColumn = new HashMap<>();
@@ -109,8 +123,78 @@ public class ExcelReader {
                 i++;
             }
         }
-        System.out.printf("Done");
+        System.out.println("Done");
         return data;
+    }
+
+    public boolean writer(Map<Integer, List<String>> data, String fileName){
+
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("data");
+        XSSFRow header = sheet.createRow(0);
+
+        List<String> strings = data.get(0);
+        Cell headerCell;
+        int index = 0;
+        for(String name: strings){
+            headerCell = header.createCell(index);
+            headerCell.setCellValue(name);
+            index++;
+        }
+
+        CellStyle style = workbook.createCellStyle();
+        style.setWrapText(true);
+
+        Iterator<Integer> iterator = new HashSet<>(data.keySet()).iterator();
+        Cell cell;
+        int rowIndex = 1;
+        while (iterator.hasNext()){
+            Row row = sheet.createRow(rowIndex);
+            index = 0;
+            Integer key = iterator.next();
+            if(key != 0){
+                List<String> stringsData = data.get(key);
+                for(String s: stringsData){
+                    cell = row.createCell(index);
+                    cell.setCellValue(s);
+                    cell.setCellStyle(style);
+                    index++;
+                }
+                rowIndex++;
+            }
+        }
+
+        File currDir = new File(".");
+        String path = currDir.getAbsolutePath();
+        String fileLocation = path.substring(0, path.length() - 1) + fileName + ".xlsx";
+
+        FileOutputStream outputStream = null;
+        try {
+            outputStream = new FileOutputStream(fileLocation);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        try {
+            workbook.write(outputStream);
+            workbook.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
+    public boolean removeCurrentFile(String fileName){
+        File currDir = new File(".");
+        String path = currDir.getAbsolutePath();
+        String fileLocation = path.substring(0, path.length() - 1) + fileName + ".xlsx";
+        try {
+            Files.deleteIfExists(Paths.get(fileLocation));
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+
+        return true;
     }
 
 
